@@ -3,7 +3,7 @@
 AIDE_DEV is a desktop coding agent for Chinese LLM APIs (DeepSeek, Qwen, GLM,
 Kimi, Doubao, MiniMax, or any OpenAI-compatible endpoint): you pick a project
 folder, describe a change, and it reads files, edits them and runs commands,
-asking before it writes a file or runs anything risky.
+asking before it writes a file or runs a command that looks risky.
 
 > Not related to WecoAI's [AIDE](https://github.com/WecoAI/aideml) (the
 > machine-learning engineering agent). Same letters, different project.
@@ -36,11 +36,6 @@ Tools the agent can call: `file_read`, `file_write`, `file_edit`, `bash`
 Not done yet: the core has an MCP client, but its tools are not handed to
 the agent in the app or the CLI; the Windows installer is not code-signed;
 there is no auto-update; macOS and Linux builds are untested.
-
-Earlier versions of this README advertised installers for six platforms, an
-npm package, a mobile app, a VS Code extension and "feature parity" with
-other agents. None of that existed; it has been removed, and the mobile,
-relay and VS Code packages were deleted (they are still in git history).
 
 ## Try it without an API key
 
@@ -103,6 +98,13 @@ destructive commands (`rm -rf /`, `format C:`, registry deletes, ...) is
 blocked in every mode. Without a terminal to ask, `safe` denies instead of
 allowing.
 
+The risk check is a list of regular expressions over the command text
+([`approval.ts`](packages/core/src/safety/approval.ts)), so it can miss
+things: `node -e "require('fs').rmSync('x')"` or `python -c ...` run
+without a prompt. Answering "always" approves every later call of that tool
+until you quit, so "always" on `bash` lets through any command that is not
+on the blocked list.
+
 **Desktop app (Windows):** download `AIDE_DEV_0.1.0_x64-setup.exe` from
 [Releases](https://github.com/appleweiping/AIDE_DEV/releases/tag/v0.1.0).
 It is built by GitHub Actions from the tagged commit, it is not code-signed
@@ -159,7 +161,7 @@ real file edit and command). CI runs them on Ubuntu and Windows.
 If you are comfortable in a terminal, Aider or OpenCode with a DeepSeek or
 Qwen key already work well, and Claude Code or Codex can be pointed at
 compatible endpoints. I wanted a small desktop app where the Chinese
-providers are presets, every write goes through an approval dialog, and the
+providers are presets, file edits go through an approval dialog, and the
 whole thing is small enough to read and change.
 
 My other two agents make different trade-offs:

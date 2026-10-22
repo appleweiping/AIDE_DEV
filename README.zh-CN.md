@@ -2,7 +2,7 @@
 
 AIDE_DEV 是一个面向国产大模型 API（DeepSeek、通义千问、智谱 GLM、Kimi、豆包、MiniMax，
 或任何 OpenAI 兼容接口）的桌面编程 Agent：选好项目目录、描述要做的修改，它会读文件、改文件、
-跑命令，写文件或执行有风险的命令之前会先弹窗问你。
+跑命令，写文件或执行看起来有风险的命令之前会先弹窗问你。
 
 > 和 WecoAI 的 [AIDE](https://github.com/WecoAI/aideml)（机器学习工程 Agent）没有关系，只是重名。
 
@@ -21,7 +21,6 @@ AIDE_DEV 是一个面向国产大模型 API（DeepSeek、通义千问、智谱 G
 - Windows 安装包：[v0.1.0](https://github.com/appleweiping/AIDE_DEV/releases/tag/v0.1.0)
   （由 GitHub Actions 从打了标签的提交构建，未签名，SmartScreen 会提示；需要 PATH 里有 Node.js 22）。
   没有 npm 包，没有自动更新；macOS / Linux 没有测试过。
-- 以前的 README 写过多平台安装包、npm 包、手机端、VS Code 插件等，这些都不存在，已经删掉。
 
 ## 不用 API Key 先试一下
 
@@ -44,6 +43,10 @@ node packages/cli/dist/index.js --provider deepseek --dir 你的项目目录
 
 `--permission safe`（默认）在写文件和有风险的命令前询问，`trusted` 不再询问，`locked`
 不使用任何工具；`rm -rf /`、格式化磁盘之类的命令在任何模式下都会被拦截。
+
+风险判断只是对命令文本做正则匹配（见 [`approval.ts`](packages/core/src/safety/approval.ts)），会有漏网的：
+`node -e "require('fs').rmSync('x')"`、`python -c ...` 这类命令不会弹窗。选“总是允许”之后，
+这个工具在退出前的所有调用都直接放行，所以对 `bash` 选了“总是允许”，除拦截列表外的任何命令都会直接执行。
 
 ## 构建桌面端
 
