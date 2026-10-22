@@ -47,11 +47,9 @@ export { IpcServer, startIpcServer } from './ipc-server.js';
 // Git
 export { GitOperations, WorktreeManager } from './git/operations.js';
 
-// Plan & Task
+// Plan
 export { PlanManager } from './plan/manager.js';
 export type { Plan, PlanStep, PlanPhase } from './plan/manager.js';
-export { TaskManager } from './task/manager.js';
-export type { TaskItem } from './task/manager.js';
 
 // Extra Tools
 export { webSearchTool } from './tools/web-search.js';
@@ -69,10 +67,6 @@ export type { McpServerConfig, McpTool } from './mcp/client.js';
 export { McpManager } from './mcp/manager.js';
 export type { McpServerStatus } from './mcp/manager.js';
 
-// Notifications
-export { NotificationManager } from './notification/manager.js';
-export type { Notification } from './notification/manager.js';
-
 // Context Compaction
 export { compactContext, estimateTokenCount, estimateMessageTokens } from './session/compaction.js';
 
@@ -83,7 +77,6 @@ export type {
   SubAgentResult,
   SubAgentManagerEvents,
 } from './agent/sub-agent.js';
-
 
 // Slash Commands
 export { SlashCommandRegistry, globalSlashRegistry } from './slash-commands/registry.js';

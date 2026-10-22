@@ -1,7 +1,7 @@
 import type { SlashCommandDefinition } from './registry.js';
 
 // ---------------------------------------------------------------------------
-// Built-in slash commands — mirrors Claude Code / Codex / OpenCode patterns
+// Built-in slash commands
 // ---------------------------------------------------------------------------
 
 export const helpCommand: SlashCommandDefinition = {

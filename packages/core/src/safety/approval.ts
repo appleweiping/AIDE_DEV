@@ -199,34 +199,27 @@ export class ApprovalManager extends EventEmitter {
       return classifyCommand(command);
     }
 
-    // file_write and file_edit always need approval in safe mode
-    if (toolCall.name === 'file_write' || toolCall.name === 'file_edit') {
+    // monitor starts a background shell command: the blocked list applies,
+    // and anything else still needs approval in safe mode
+    if (toolCall.name === 'monitor') {
+      const assessment = classifyCommand(String(toolCall.arguments.command ?? ''));
+      if (assessment.level === 'blocked') return assessment;
+      return { level: 'needs_approval', reason: 'background command' };
+    }
+
+    // file_write, file_edit and notebook_edit always need approval in safe mode
+    if (toolCall.name === 'file_write' || toolCall.name === 'file_edit' || toolCall.name === 'notebook_edit') {
       return { level: 'needs_approval', reason: 'file write operation' };
     }
 
+    if (toolCall.name === 'node_repl') {
+      return { level: 'needs_approval', reason: 'runs JavaScript code' };
+    }
+
     // Read-only tools are always safe
-    const safeTools = new Set([
-      'file_read', 'glob', 'grep', 'web_search', 'web_fetch',
-      'lsp_hover', 'lsp_definition', 'lsp_references',
-      'shared_read', 'skill_list',
-    ]);
+    const safeTools = new Set(['file_read', 'glob', 'grep', 'web_search', 'web_fetch']);
     if (safeTools.has(toolCall.name)) {
       return { level: 'safe', reason: 'read-only operation' };
-    }
-
-    // Notebook edit is a write operation
-    if (toolCall.name === 'notebook_edit') {
-      return { level: 'needs_approval', reason: 'notebook write operation' };
-    }
-
-    // Desktop/browser control tools need approval
-    if (toolCall.name.startsWith('desktop_') || toolCall.name.startsWith('browser_')) {
-      return { level: 'needs_approval', reason: 'desktop or browser automation' };
-    }
-
-    // Docker sandbox is safer than bare bash
-    if (toolCall.name === 'bash_sandbox') {
-      return { level: 'safe', reason: 'sandboxed execution' };
     }
 
     // Unknown tools default to needs_approval
