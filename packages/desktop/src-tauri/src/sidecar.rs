@@ -21,7 +21,7 @@ impl Sidecar {
     /// Path of the bundled engine script (copied in as a Tauri resource).
     fn script_path(app: &AppHandle) -> Result<PathBuf, String> {
         let dir = app.path().resource_dir().map_err(|e| e.to_string())?;
-        Ok(dir.join("core").join("aide-core.mjs"))
+        Ok(plain_path(dir.join("core").join("aide-core.mjs")))
     }
 
     pub fn start(&mut self, app: &AppHandle) -> Result<(), String> {
@@ -102,6 +102,17 @@ impl Sidecar {
             let _ = child.kill();
             let _ = child.wait();
         }
+    }
+}
+
+/// On Windows the resource dir comes back as `\\?\C:\...`. Node cannot start
+/// a script from such a path (it fails with `EISDIR, lstat 'C:'`), so drop the
+/// prefix when what follows is an ordinary drive path.
+fn plain_path(p: PathBuf) -> PathBuf {
+    let s = p.to_string_lossy().into_owned();
+    match s.strip_prefix(r"\\?\") {
+        Some(rest) if rest.as_bytes().get(1) == Some(&b':') => PathBuf::from(rest),
+        _ => p,
     }
 }
 
