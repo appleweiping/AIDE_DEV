@@ -11,7 +11,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/api": "^2.12.0",
     "i18next": "^23.11.5",
     "i18next-browser-languagedetector": "^8.0.0",
     "react": "^18.3.1",
@@ -22,7 +22,7 @@
   "devDependencies": {
     "@aide/shared": "workspace:*",
     "@tailwindcss/vite": "^4.0.0",
-    "@tauri-apps/cli": "^2.0.0",
+    "@tauri-apps/cli": "^2.12.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

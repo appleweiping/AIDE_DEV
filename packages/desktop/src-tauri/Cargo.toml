@@ -18,7 +18,7 @@ path = "src/main.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "~2.11", features = [] }  # keep in step with @tauri-apps/api
+tauri = { version = "2.12", features = [] }  # same minor version as @tauri-apps/api
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 log = "0.4"
