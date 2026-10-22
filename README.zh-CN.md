@@ -18,7 +18,9 @@ AIDE_DEV 是一个面向国产大模型 API（DeepSeek、通义千问、智谱 G
   DeepSeek/QwQ 的 `reasoning_content`）、工具循环、审批规则、会话存储、stdio 上的 JSON-RPC。
 - `packages/desktop`：Tauri 2 + React 桌面端，Rust 一侧用 `node` 启动引擎。
 - `packages/cli`：同一个引擎的命令行客户端，不装 Rust 也能用。
-- 还没有发布安装包，也没有 npm 包。安装包未签名、没有自动更新；macOS / Linux 没有测试过。
+- Windows 安装包：[v0.1.0](https://github.com/appleweiping/AIDE_DEV/releases/tag/v0.1.0)
+  （由 GitHub Actions 从打了标签的提交构建，未签名，SmartScreen 会提示；需要 PATH 里有 Node.js 22）。
+  没有 npm 包，没有自动更新；macOS / Linux 没有测试过。
 - 以前的 README 写过多平台安装包、npm 包、手机端、VS Code 插件等，这些都不存在，已经删掉。
 
 ## 不用 API Key 先试一下

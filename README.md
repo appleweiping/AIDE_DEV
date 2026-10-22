@@ -34,8 +34,8 @@ Tools the agent can call: `file_read`, `file_write`, `file_edit`, `bash`
 `node_repl`.
 
 Not done yet: the core has an MCP client, but its tools are not handed to
-the agent in the app or the CLI; the installer is not code-signed; there is
-no auto-update; macOS and Linux builds are untested.
+the agent in the app or the CLI; the Windows installer is not code-signed;
+there is no auto-update; macOS and Linux builds are untested.
 
 Earlier versions of this README advertised installers for six platforms, an
 npm package, a mobile app, a VS Code extension and "feature parity" with
@@ -103,7 +103,10 @@ destructive commands (`rm -rf /`, `format C:`, registry deletes, ...) is
 blocked in every mode. Without a terminal to ask, `safe` denies instead of
 allowing.
 
-**Desktop app:** there is no release yet; build it as below. On first start
+**Desktop app (Windows):** download `AIDE_DEV_0.1.0_x64-setup.exe` from
+[Releases](https://github.com/appleweiping/AIDE_DEV/releases/tag/v0.1.0).
+It is built by GitHub Actions from the tagged commit, it is not code-signed
+(SmartScreen will warn), and it needs Node.js 22 on `PATH`. On first start
 it opens Settings: choose the project folder, a provider, a model and paste
 the key. Settings, including the key, are stored in the app's local storage
 on your computer and the key is only sent to the endpoint you set.
@@ -124,9 +127,11 @@ pnpm --filter @aide/desktop tauri build      # NSIS installer in packages/deskto
 ```
 
 The `desktop` workflow builds the Windows installer on every push to
-`master` and keeps it as a workflow artifact. Only Windows is built and
-tried; macOS and Linux should work with `tauri build --bundles dmg` or
-`deb`, but I have not tested them.
+`master`, installs it silently on the runner and starts it with
+`AIDE_SMOKE_TEST=1`, which makes the app exit successfully only once its
+bundled engine reports ready. Tags matching `v*` attach the installer to a
+release. Only Windows is built and tried; macOS and Linux should work with
+`tauri build --bundles dmg` or `deb`, but I have not tested them.
 
 To work on the UI without Rust, run the engine bridge and Vite, then open
 http://localhost:1420:
