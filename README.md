@@ -14,10 +14,11 @@ asking before it writes a file or runs a command that looks risky.
 
 ![AIDE_DEV after fixing a typo in greet.js](docs/desktop.png)
 
-The screenshot is the desktop UI after one turn. It was captured in headless
-Chromium through `scripts/dev-bridge.mjs` (the same React UI and the same
-engine process the app starts), with the model replies scripted by
-`scripts/fake-llm.mjs`. The file edit and the `Hello, world!` output are real.
+The screenshot is the desktop UI after one turn. `node scripts/screenshot.mjs`
+takes it in headless Chromium through `scripts/dev-bridge.mjs` (the same React
+UI and the same engine process the app starts), with the model replies
+scripted by `scripts/fake-llm.mjs`. The file edit and the `Hello, world!`
+output are real.
 
 ## What is in here
 

@@ -8,7 +8,7 @@ AIDE_DEV 是一个面向国产大模型 API（DeepSeek、通义千问、智谱 G
 
 ![AIDE_DEV 修好 greet.js 里的拼写错误之后](docs/desktop.png)
 
-截图是桌面端界面跑完一轮之后的样子：通过 `scripts/dev-bridge.mjs` 在无头 Chromium 里运行
+截图是桌面端界面跑完一轮之后的样子：由 `node scripts/screenshot.mjs` 通过 `scripts/dev-bridge.mjs` 在无头 Chromium 里运行
 （同一套 React 界面、同一个引擎进程），模型回复由 `scripts/fake-llm.mjs` 预先写好，
 文件修改和 `Hello, world!` 输出是真实执行的结果。
 
