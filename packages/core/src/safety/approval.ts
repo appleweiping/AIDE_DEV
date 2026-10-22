@@ -119,13 +119,13 @@ export class ApprovalManager extends EventEmitter {
   async requestApproval(toolCall: ToolCall, signal?: AbortSignal): Promise<boolean> {
     if (this.mode === 'locked') return false;
 
-    // Check permanent approvals (skip in ask mode — ask mode always prompts)
-    if (!this._askMode && this.permanentlyApproved.has(toolCall.name)) return true;
-
-    // Classify the tool call
+    // Classify first, so the blocked list also applies to tools approved with "always"
     const assessment = this.assessToolCall(toolCall);
 
     if (assessment.level === 'blocked') return false;
+
+    // Check permanent approvals (skip in ask mode — ask mode always prompts)
+    if (!this._askMode && this.permanentlyApproved.has(toolCall.name)) return true;
 
     // In ask mode: every non-blocked call needs approval
     // In trusted mode without ask: always approve safe/needs_approval

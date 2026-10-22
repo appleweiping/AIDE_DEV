@@ -43,6 +43,14 @@ describe('ApprovalManager', () => {
     const trusted = new ApprovalManager('trusted');
     assert.equal(await trusted.requestApproval(toolCall('file_write', { path: 'a' })), true);
     assert.equal(await trusted.requestApproval(toolCall('bash', { command: 'rm -rf /' })), false);
+    assert.equal(await trusted.requestApproval(toolCall('monitor', { command: 'rm -rf /', description: 'x' })), false);
+  });
+
+  test('"always" on bash does not unblock the blocked list', async () => {
+    const mgr = new ApprovalManager('safe');
+    mgr.on('approval_request', (req) => mgr.respondWithToolName({ id: req.id, approved: true, remember: true }, req.toolName));
+    assert.equal(await mgr.requestApproval(toolCall('bash', { command: 'rm notes.txt' })), true);
+    assert.equal(await mgr.requestApproval(toolCall('bash', { command: 'rm -rf /' })), false);
   });
 
   test('safe mode asks for writes and remembers "always"', async () => {

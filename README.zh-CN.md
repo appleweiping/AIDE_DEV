@@ -62,7 +62,7 @@ pnpm --filter @aide/desktop tauri build    # 生成 Windows 安装包（NSIS）
 
 ## 测试
 
-`pnpm test` 运行 `packages/core/test` 里的 12 个测试，CI 在 Ubuntu 和 Windows 上跑。
+`pnpm test` 运行 `packages/core/test` 里的 13 个测试，CI 在 Ubuntu 和 Windows 上跑。
 
 ## 相关项目
 

@@ -146,7 +146,7 @@ pnpm --filter @aide/desktop dev
 ## Tests
 
 ```bash
-pnpm test        # 12 node:test tests in packages/core/test
+pnpm test        # 13 node:test tests in packages/core/test
 pnpm typecheck
 ```
 
