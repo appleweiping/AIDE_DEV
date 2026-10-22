@@ -44,11 +44,22 @@ pub fn run() {
             start_error: Mutex::new(None),
         })
         .setup(|app| {
+            if std::env::var_os("AIDE_SMOKE_TEST").is_some() {
+                std::thread::spawn(|| {
+                    std::thread::sleep(std::time::Duration::from_secs(30));
+                    eprintln!("smoke test: engine did not report ready within 30 s");
+                    std::process::exit(2);
+                });
+            }
             let handle = app.handle().clone();
             let state = app.state::<AppState>();
             let result = state.sidecar.lock().unwrap().start(&handle);
             if let Err(message) = result {
                 log::error!("{message}");
+                if std::env::var_os("AIDE_SMOKE_TEST").is_some() {
+                    eprintln!("smoke test: {message}");
+                    std::process::exit(3);
+                }
                 *state.start_error.lock().unwrap() = Some(message.clone());
                 let _ = handle.emit(
                     "core",

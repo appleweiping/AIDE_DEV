@@ -52,10 +52,17 @@ impl Sidecar {
         self.child = Some(child);
 
         let out_app = app.clone();
+        // CI sets AIDE_SMOKE_TEST to check that the installed app can find and
+        // start its engine; the app exits as soon as the engine says it is ready.
+        let smoke_test = std::env::var_os("AIDE_SMOKE_TEST").is_some();
         std::thread::spawn(move || {
             for line in BufReader::new(stdout).lines() {
                 let Ok(text) = line else { break };
                 if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if smoke_test && value.get("event").and_then(|e| e.as_str()) == Some("ready") {
+                        println!("smoke test: engine ready");
+                        std::process::exit(0);
+                    }
                     let _ = out_app.emit("core", value);
                 }
             }
