@@ -12,8 +12,6 @@ export { notebookEditTool } from './notebook-edit.js';
 export { monitorTool } from './monitor.js';
 export { powershellTool } from './powershell.js';
 export { nodeReplTool } from './node-repl.js';
-export { cronTool } from './cron.js';
-export { askUserTool } from './ask-user.js';
 export { createEnterPlanModeTool } from './enter-plan-mode.js';
 export { createExitPlanModeTool } from './exit-plan-mode.js';
 export { handleTodoCommand, todoAdd, todoList, todoDone, todoStart, todoRemove, todoClear, formatTodoList, setTodoStorePath } from './todo.js';
@@ -32,8 +30,6 @@ import { notebookEditTool } from './notebook-edit.js';
 import { monitorTool } from './monitor.js';
 import { powershellTool } from './powershell.js';
 import { nodeReplTool } from './node-repl.js';
-import { cronTool } from './cron.js';
-import { askUserTool } from './ask-user.js';
 import { createEnterPlanModeTool } from './enter-plan-mode.js';
 import { createExitPlanModeTool } from './exit-plan-mode.js';
 import { setWorkingDirectory } from './path-guard.js';
@@ -76,8 +72,6 @@ export function registerBuiltinTools(planManager?: PlanManager): void {
     toolRegistry.registerTool(wrapTool(powershellTool));
   }
   toolRegistry.registerTool(wrapTool(nodeReplTool));
-  toolRegistry.registerTool(wrapTool(cronTool));
-  toolRegistry.registerTool(wrapTool(askUserTool));
   if (planManager) {
     toolRegistry.registerTool(wrapPlanTool(createEnterPlanModeTool(planManager)));
     toolRegistry.registerTool(wrapPlanTool(createExitPlanModeTool(planManager)));
@@ -102,8 +96,6 @@ export function createDefaultTools(workingDirectory: string, planManager?: PlanM
     registry.registerTool(wrapTool(powershellTool));
   }
   registry.registerTool(wrapTool(nodeReplTool));
-  registry.registerTool(wrapTool(cronTool));
-  registry.registerTool(wrapTool(askUserTool));
   if (planManager) {
     registry.registerTool(wrapPlanTool(createEnterPlanModeTool(planManager)));
     registry.registerTool(wrapPlanTool(createExitPlanModeTool(planManager)));

@@ -134,7 +134,7 @@ export async function startRepl(provider: LLMProvider, config: AgentConfig): Pro
   });
   agent.on('error', (err: Error) => console.error(`\n\x1b[31mError: ${err.message}\x1b[0m`));
 
-  console.log('\x1b[1mAiDE\x1b[0m interactive mode  (type \x1b[36m/help\x1b[0m for commands)');
+  console.log('\x1b[1mAIDE_DEV\x1b[0m  (type \x1b[36m/help\x1b[0m for commands, \x1b[36m/exit\x1b[0m to leave)');
   console.log(`\x1b[2m${config.provider.name} · ${config.provider.model} · ${config.permissionMode} · ${config.workingDirectory}\x1b[0m\n`);
 
   // Session state

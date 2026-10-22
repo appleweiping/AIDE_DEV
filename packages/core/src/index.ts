@@ -60,8 +60,6 @@ export { notebookEditTool } from './tools/notebook-edit.js';
 export { monitorTool, stopMonitor, listMonitors } from './tools/monitor.js';
 export { powershellTool } from './tools/powershell.js';
 export { nodeReplTool } from './tools/node-repl.js';
-export { cronTool, checkAndFireJobs } from './tools/cron.js';
-export { askUserTool, respondToQuestion, askUserEvents } from './tools/ask-user.js';
 export { handleTodoCommand, todoAdd, todoList, todoDone, todoStart, todoRemove, todoClear, formatTodoList, setTodoStorePath } from './tools/todo.js';
 export type { TodoItem, TodoStatus, TodoPriority } from './tools/todo.js';
 
