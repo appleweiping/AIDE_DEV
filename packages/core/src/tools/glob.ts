@@ -1,5 +1,6 @@
 import { readdir, stat } from 'node:fs/promises';
 import { resolve, join, relative } from 'node:path';
+import { resolvePath, getWorkingDirectory } from './path-guard.js';
 import type { RegisteredTool, ToolResult } from './registry.js';
 
 const DEFINITION = {
@@ -34,7 +35,7 @@ async function handler(args: Record<string, unknown>): Promise<ToolResult> {
     return { output: 'Error: pattern is required', isError: true };
   }
 
-  const rootDir = args.path ? resolve(String(args.path)) : process.cwd();
+  const rootDir = args.path ? resolvePath(String(args.path)) : getWorkingDirectory();
   const limit = typeof args.limit === 'number' ? Math.max(1, Math.floor(args.limit)) : 500;
 
   let matches: Array<{ path: string; mtime: number }>;

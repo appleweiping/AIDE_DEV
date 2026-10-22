@@ -113,37 +113,30 @@ export class ProviderRegistry {
    */
   registerFactory(id: string, factory: ProviderFactory): void {
     this.factories.set(id, factory);
-    // Invalidate any cached instance for this id
-    this.instances.delete(id);
+    this.invalidate(id);
   }
 
   /**
    * Get (or create) a provider instance for the given config.
-   * Instances are cached by config.id; pass a fresh config to force recreation.
+   * Instances are cached per id + endpoint + model + key, so changing the key
+   * or model in the settings takes effect on the next request.
    */
   get(config: ProviderConfig): LLMProvider {
-    const cached = this.instances.get(config.id);
+    const key = cacheKey(config);
+    const cached = this.instances.get(key);
     if (cached) return cached;
 
     const factory = this.factories.get(config.id);
-    if (factory) {
-      const instance = factory(config);
-      this.instances.set(config.id, instance);
-      return instance;
-    }
-
-    // Fall back to generic OpenAI-compat provider
-    const instance = new GenericOpenAICompatProvider(config);
-    this.instances.set(config.id, instance);
+    const instance = factory ? factory(config) : new GenericOpenAICompatProvider(config);
+    this.instances.set(key, instance);
     return instance;
   }
 
-  /**
-   * Invalidate the cached instance for a provider id.
-   * Useful when the user changes API key or model.
-   */
+  /** Drop every cached instance for a provider id. */
   invalidate(id: string): void {
-    this.instances.delete(id);
+    for (const key of [...this.instances.keys()]) {
+      if (key.startsWith(`${id}\u0000`)) this.instances.delete(key);
+    }
   }
 
   /** Return all known provider presets (from @aide/shared constants). */
@@ -155,6 +148,10 @@ export class ProviderRegistry {
   getPreset(id: string): ProviderPreset | undefined {
     return PROVIDER_PRESETS.find((p) => p.id === id);
   }
+}
+
+function cacheKey(config: ProviderConfig): string {
+  return [config.id, config.baseUrl, config.model, config.apiKey].join('\u0000');
 }
 
 /** Singleton registry — import this in agent.ts and ipc-server.ts */

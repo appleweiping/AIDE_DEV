@@ -1,6 +1,7 @@
 {
   "name": "@aide/core",
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,18 +15,16 @@
     "build": "tsdown && tsc --emitDeclarationOnly --declaration",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
-    "@aide/shared": "workspace:*",
-    "better-sqlite3": "^9.6.0",
-    "ws": "^8.18.0"
+    "@aide/shared": "workspace:*"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.9.1",
-    "@types/ws": "^8.5.13",
     "tsdown": "^0.12.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.8.0"
   }
 }

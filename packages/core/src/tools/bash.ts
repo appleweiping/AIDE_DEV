@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import type { RegisteredTool, ToolResult } from './registry.js';
-import { resolvePath } from './path-guard.js';
+import { resolvePath, getWorkingDirectory } from './path-guard.js';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUT_MS = 300_000;
@@ -63,7 +63,7 @@ async function handler(args: Record<string, unknown>): Promise<ToolResult> {
 
   const cwd = args.working_directory
     ? resolvePath(String(args.working_directory))
-    : process.cwd();
+    : getWorkingDirectory();
 
   const timeoutMs = typeof args.timeout_ms === 'number'
     ? Math.min(Math.max(1000, args.timeout_ms), MAX_TIMEOUT_MS)

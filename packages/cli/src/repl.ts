@@ -1,14 +1,10 @@
 import * as readline from 'node:readline';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { Agent, createDefaultTools, globalSlashRegistry, builtinCommands, listMonitors, stopMonitor, handleTodoCommand } from '@aide/core';
+import { Agent, ApprovalManager, createDefaultTools, globalSlashRegistry, builtinCommands, listMonitors, stopMonitor, handleTodoCommand } from '@aide/core';
 import type { LLMProvider } from '@aide/core';
-
-interface ReplOptions {
-  dir: string;
-  thinking?: boolean;
-  permissionMode?: 'safe' | 'trusted' | 'locked';
-}
+import type { AgentConfig } from '@aide/shared';
+import { attachApprovalPrompt, describeCall } from './approval.js';
 
 type ReplMode = 'auto' | 'plan' | 'ask';
 
@@ -60,14 +56,6 @@ function askConfirmation(rl: readline.Interface, question: string): Promise<bool
   });
 }
 
-async function confirmPlan(rl: readline.Interface, steps: string[], title: string): Promise<boolean> {
-  console.log(`\n\x1b[1;33m${title}\x1b[0m`);
-  console.log('\x1b[2m' + '─'.repeat(50) + '\x1b[0m');
-  steps.forEach((step, i) => console.log(`  \x1b[2m${i + 1}.\x1b[0m ${step}`));
-  console.log();
-  return askConfirmation(rl, '  \x1b[1mProceed?\x1b[0m \x1b[2m[y/N]\x1b[0m ');
-}
-
 // ---------------------------------------------------------------------------
 // Monitor slash command handler
 // ---------------------------------------------------------------------------
@@ -116,34 +104,38 @@ function handleMonitorCommand(args: string): string {
 // REPL
 // ---------------------------------------------------------------------------
 
-export async function startRepl(provider: LLMProvider, options: ReplOptions): Promise<void> {
+export async function startRepl(provider: LLMProvider, config: AgentConfig): Promise<void> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
+  const options = { dir: config.workingDirectory, permissionMode: config.permissionMode };
 
   const registry = createDefaultTools(options.dir);
-  const agent = await Agent.create(provider, registry, {
-    maxIterations: 50,
-    thinkingEnabled: options.thinking ?? false,
-    thinkingEffort: 'medium',
-    permissionMode: options.permissionMode ?? 'safe',
-    workingDirectory: options.dir,
-    provider: { id: 'cli', name: 'cli', baseUrl: '', apiKey: '', model: '' },
-  });
+  const approvals = new ApprovalManager(config.permissionMode);
+  attachApprovalPrompt(approvals, rl);
+  const agent = await Agent.create(provider, registry, config, approvals);
 
-  agent.on('content', (delta: string) => process.stdout.write(delta));
+  let afterTool = false; // blank line between tool output and the answer
+  agent.on('content', (delta: string) => {
+    if (afterTool) process.stdout.write('\n');
+    afterTool = false;
+    process.stdout.write(delta);
+  });
   agent.on('reasoning', (delta: string) => process.stderr.write(`\x1b[2m${delta}\x1b[0m`));
-  agent.on('tool_start', (call: { name: string }) => process.stderr.write(`\n\x1b[36m⚙ ${call.name}\x1b[0m\n`));
-  agent.on('tool_end', (_call: unknown, result: { isError: boolean }) => {
-    if (result.isError) process.stderr.write(`\x1b[31m✗ error\x1b[0m\n`);
+  agent.on('tool_start', (call) => process.stderr.write(`\n\x1b[36m⚙ ${describeCall(call)}\x1b[0m\n`));
+  agent.on('tool_end', (_call: unknown, result: { content?: string; isError: boolean }, ms: number) => {
+    const first = String(result.content ?? '').split('\n')[0].slice(0, 100);
+    process.stderr.write(`  ${result.isError ? '\x1b[31m✗' : '\x1b[32m✓'}\x1b[0m \x1b[2m${first} (${ms} ms)\x1b[0m\n`);
+    afterTool = true;
   });
   agent.on('compacted', (before: number, after: number) => {
     process.stderr.write(`\x1b[2m[context compacted: ${before} → ${after} messages]\x1b[0m\n`);
   });
   agent.on('error', (err: Error) => console.error(`\n\x1b[31mError: ${err.message}\x1b[0m`));
 
-  console.log('\x1b[1mAiDE\x1b[0m interactive mode  (type \x1b[36m/help\x1b[0m for commands)\n');
+  console.log('\x1b[1mAiDE\x1b[0m interactive mode  (type \x1b[36m/help\x1b[0m for commands)');
+  console.log(`\x1b[2m${config.provider.name} · ${config.provider.model} · ${config.permissionMode} · ${config.workingDirectory}\x1b[0m\n`);
 
   // Session state
   let replMode: ReplMode = 'auto';
@@ -160,6 +152,11 @@ export async function startRepl(provider: LLMProvider, options: ReplOptions): Pr
         const spaceIdx = trimmed.indexOf(' ');
         const cmdName = spaceIdx === -1 ? trimmed.slice(1) : trimmed.slice(1, spaceIdx);
         const cmdArgs = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx + 1).trim();
+
+        if (cmdName === 'exit' || cmdName === 'quit') {
+          rl.close();
+          process.exit(0);
+        }
 
         // ── /todo ──────────────────────────────────────────────────────────
         if (cmdName === 'todo') {
@@ -185,10 +182,11 @@ export async function startRepl(provider: LLMProvider, options: ReplOptions): Pr
             console.log(`\x1b[2mCurrent mode: ${replMode}\x1b[0m`);
           } else {
             replMode = newMode;
+            approvals.setAskMode(newMode === 'ask');
             const desc: Record<ReplMode, string> = {
-              auto: 'run freely — no confirmation required',
-              plan: 'print plan before agent.run(), wait for y/N',
-              ask:  'confirm each tool execution individually',
+              auto: 'ask only before writes and risky commands',
+              plan: 'confirm each message before the agent starts',
+              ask:  'confirm every tool call',
             };
             console.log(`\x1b[2mMode: \x1b[96m${replMode}\x1b[0m\x1b[2m  ${desc[replMode]}\x1b[0m`);
           }
@@ -255,10 +253,12 @@ export async function startRepl(provider: LLMProvider, options: ReplOptions): Pr
             console.log('  \x1b[36m/mode\x1b[0m  — switch mode (/mode auto|plan|ask)');
             console.log('  \x1b[36m/image\x1b[0m <path>  — attach image to next message');
             console.log('  \x1b[36m/images\x1b[0m  — list attached images');
+            console.log('  \x1b[36m/exit\x1b[0m  — leave (also /quit or Ctrl+D)');
             console.log();
           } else if (result.output.startsWith('__PERMISSIONS_SET__:')) {
             const mode = result.output.split(':')[1] as 'safe' | 'trusted' | 'locked';
             options.permissionMode = mode;
+            approvals.setMode(mode);
             console.log(`\x1b[2mPermission mode: ${mode}\x1b[0m`);
           } else if (result.output === '__PERMISSIONS_SHOW__') {
             console.log(`\x1b[2mPermission mode: ${options.permissionMode ?? 'safe'}\x1b[0m`);
@@ -323,29 +323,10 @@ async function runWithMode(
   }
 
   if (mode === 'plan') {
-    // Show a plan summary and ask for confirmation before running
-    const steps = [
-      `Process: "${message.slice(0, 60)}${message.length > 60 ? '…' : ''}"`,
-      'Agent will use available tools to complete the task',
-      'Results will be streamed to terminal',
-    ];
-    const ok = await confirmPlan(rl, steps, 'Plan');
-    if (!ok) {
-      console.log('\x1b[2mCancelled.\x1b[0m');
-      return;
-    }
-    await agent.run(typeof content === 'string' ? content : JSON.stringify(content));
-    return;
-  }
-
-  if (mode === 'ask') {
-    // In ask mode, we intercept tool_start events and ask for confirmation
-    // We do this by temporarily adding a listener that pauses execution
-    // Since the agent doesn't natively support per-tool confirmation in this
-    // architecture, we use a pre-run confirmation for the whole message.
+    // Confirm the message before the agent starts working on it
     const ok = await askConfirmation(
       rl,
-      `  \x1b[2mRun agent on:\x1b[0m "${message.slice(0, 60)}"  \x1b[2m[y/N]\x1b[0m `,
+      `  \x1b[2mSend to the agent:\x1b[0m "${message.slice(0, 60)}${message.length > 60 ? '…' : ''}"  \x1b[2m[y/N]\x1b[0m `,
     );
     if (!ok) {
       console.log('\x1b[2mCancelled.\x1b[0m');
@@ -354,4 +335,7 @@ async function runWithMode(
     await agent.run(typeof content === 'string' ? content : JSON.stringify(content));
     return;
   }
+
+  // 'ask' mode: the approval manager is in ask mode and prompts for every tool call.
+  await agent.run(typeof content === 'string' ? content : JSON.stringify(content));
 }

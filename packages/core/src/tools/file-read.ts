@@ -1,5 +1,5 @@
 import { readFile, stat } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolvePath } from './path-guard.js';
 import type { RegisteredTool, ToolResult } from './registry.js';
 
 const DEFINITION = {
@@ -33,7 +33,7 @@ async function handler(args: Record<string, unknown>): Promise<ToolResult> {
     return { output: 'Error: path is required', isError: true };
   }
 
-  const absPath = resolve(filePath);
+  const absPath = resolvePath(filePath);
   const offset = typeof args.offset === 'number' ? Math.max(1, Math.floor(args.offset)) : 1;
   const limit = typeof args.limit === 'number' ? Math.max(1, Math.floor(args.limit)) : 2000;
 

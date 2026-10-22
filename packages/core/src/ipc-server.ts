@@ -14,7 +14,8 @@
  */
 
 import { createInterface } from 'node:readline';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import type {
   AgentConfig,
   ProviderConfig,
@@ -27,13 +28,13 @@ import { providerRegistry } from './provider/registry.js';
 import type { ProviderMessage } from './provider/types.js';
 import { toolRegistry } from './tools/registry.js';
 import { registerBuiltinTools } from './tools/index.js';
+import { setWorkingDirectory } from './tools/path-guard.js';
 import { ApprovalManager } from './safety/approval.js';
 import { SessionManager } from './session/manager.js';
 import { McpManager } from './mcp/manager.js';
 import type { McpServerConfig } from './mcp/client.js';
 import { GitOperations } from './git/operations.js';
 import { SubAgentManager, SharedContext } from './agent/sub-agent.js';
-import { AutoUpdater } from './updater/index.js';
 import { HooksManager } from './hooks/manager.js';
 import type { HookDefinition, HookEvent } from './hooks/manager.js';
 
@@ -68,7 +69,6 @@ export class IpcServer {
   private sessionManager: SessionManager;
   private approvalManager: ApprovalManager;
   private mcpManager: McpManager;
-  private updater: AutoUpdater;
   private hooksManager: HooksManager;
   private activeAgent: Agent | null = null;
   private activeSessionId: string | null = null;
@@ -78,7 +78,6 @@ export class IpcServer {
     this.sessionManager = new SessionManager(sessionsDir);
     this.approvalManager = new ApprovalManager('safe');
     this.mcpManager = new McpManager();
-    this.updater = new AutoUpdater({ owner: 'aide-dev', repo: 'aide' });
     this.hooksManager = new HooksManager();
 
     // Initialize shared context for sub-agent communication
@@ -95,11 +94,6 @@ export class IpcServer {
     this.mcpManager.on('connected', (name) => this.sendEvent('mcp.connected', { name }));
     this.mcpManager.on('disconnected', (name) => this.sendEvent('mcp.disconnected', { name }));
 
-    // Forward updater events to the UI
-    this.updater.on('update-available', (info) => this.sendEvent('updater.updateAvailable', info));
-    this.updater.on('download-progress', (progress) => this.sendEvent('updater.downloadProgress', progress));
-    this.updater.on('update-ready', (payload) => this.sendEvent('updater.updateReady', payload));
-    this.updater.on('no-update', (payload) => this.sendEvent('updater.noUpdate', payload));
   }
 
   async start(): Promise<void> {
@@ -233,6 +227,10 @@ export class IpcServer {
           this.activeAgent.cancel();
           this.activeAgent = null;
         }
+
+        // File tools resolve relative paths and restrict writes to this folder;
+        // bash, glob and grep run in it.
+        setWorkingDirectory(session.workingDirectory);
 
         // Create provider and agent
         const provider = providerRegistry.get(providerConfig);
@@ -530,31 +528,6 @@ export class IpcServer {
         return;
       }
 
-      // --- Updater methods ---
-      case 'updater.check': {
-        // Run async, result comes via events
-        this.sendResult(request.id, { checking: true });
-        this.updater.checkForUpdates().catch((err: unknown) => {
-          const message = err instanceof Error ? err.message : String(err);
-          this.sendEvent('updater.error', { error: message });
-        });
-        return;
-      }
-
-      case 'updater.download': {
-        const version = String(params.version ?? '');
-        const assetUrl = params.assetUrl ? String(params.assetUrl) : undefined;
-        if (!version) return this.sendError(request.id, -32602, 'version is required');
-
-        // Run async, progress comes via events
-        this.sendResult(request.id, { downloading: true, version });
-        this.updater.downloadUpdate(version, assetUrl).catch((err: unknown) => {
-          const message = err instanceof Error ? err.message : String(err);
-          this.sendEvent('updater.error', { error: message });
-        });
-        return;
-      }
-
       // --- Hooks methods ---
       case 'hooks.register': {
         const hook = params as unknown as HookDefinition;
@@ -696,7 +669,7 @@ function providerMessageToMessage(msg: ProviderMessage): Message {
 // ---------------------------------------------------------------------------
 
 export async function startIpcServer(sessionsDir?: string): Promise<void> {
-  const dir = sessionsDir ?? resolve(process.env.AIDE_SESSIONS_DIR ?? './sessions');
+  const dir = sessionsDir ?? resolve(process.env.AIDE_SESSIONS_DIR ?? join(homedir(), '.aide', 'sessions'));
   const server = new IpcServer(dir);
   await server.start();
 }

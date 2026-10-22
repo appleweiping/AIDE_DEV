@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
+import { resolvePath, getWorkingDirectory } from './path-guard.js';
 import type { RegisteredTool, ToolResult } from './registry.js';
 
 const DEFINITION = {
@@ -47,7 +48,7 @@ async function handler(args: Record<string, unknown>): Promise<ToolResult> {
     return { output: 'Error: pattern is required', isError: true };
   }
 
-  const searchPath = args.path ? resolve(String(args.path)) : process.cwd();
+  const searchPath = args.path ? resolvePath(String(args.path)) : getWorkingDirectory();
   const glob = args.glob ? String(args.glob) : undefined;
   const caseInsensitive = Boolean(args.case_insensitive);
   const contextLines = typeof args.context_lines === 'number' ? Math.max(0, args.context_lines) : 0;

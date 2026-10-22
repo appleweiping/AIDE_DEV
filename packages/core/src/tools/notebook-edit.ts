@@ -1,12 +1,15 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { notebookEditDefinition } from './definitions-extra.js';
+import { resolvePath, validateWritePath } from './path-guard.js';
 
 export const notebookEditTool = {
   definition: notebookEditDefinition,
 
-  async execute(args: Record<string, unknown>, workingDirectory: string): Promise<string> {
-    const filePath = path.resolve(workingDirectory, args.path as string);
+  async execute(args: Record<string, unknown>): Promise<string> {
+    const filePath = resolvePath(String(args.path ?? ''));
+    const denied = validateWritePath(filePath);
+    if (denied) throw new Error(denied);
     const cellIndex = args.cellIndex as number;
     const mode = args.mode as 'replace' | 'insert' | 'delete';
     const cellType = (args.cellType as string) || 'code';
