@@ -27,6 +27,9 @@ impl Sidecar {
     pub fn start(&mut self, app: &AppHandle) -> Result<(), String> {
         let script = Self::script_path(app)?;
         let node = std::env::var("AIDE_NODE").unwrap_or_else(|_| "node".to_string());
+        if std::env::var_os("AIDE_SMOKE_TEST").is_some() {
+            eprintln!("starting {node} {} (exists: {})", script.display(), script.exists());
+        }
 
         let mut cmd = Command::new(&node);
         cmd.arg(&script)
@@ -75,6 +78,9 @@ impl Sidecar {
         std::thread::spawn(move || {
             for line in BufReader::new(stderr).lines() {
                 let Ok(text) = line else { break };
+                if smoke_test {
+                    eprintln!("core: {text}");
+                }
                 log::warn!("core: {text}");
             }
         });

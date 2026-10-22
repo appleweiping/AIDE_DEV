@@ -38,9 +38,10 @@ jobs:
           Start-Process $installer.FullName -ArgumentList '/S' -Wait
           $exe = Get-ChildItem "$env:LOCALAPPDATA\AIDE_DEV" -Filter *.exe -Recurse | Where-Object { $_.Name -notmatch 'uninstall' } | Select-Object -First 1
           if (-not $exe) { throw "installed app not found under $env:LOCALAPPDATA\AIDE_DEV" }
-          Write-Host "starting $($exe.FullName)"
+          Get-ChildItem "$env:LOCALAPPDATA\AIDE_DEV" -Recurse | ForEach-Object { $_.FullName }
           $env:AIDE_SMOKE_TEST = '1'
-          $p = Start-Process $exe.FullName -PassThru -Wait
+          $p = Start-Process $exe.FullName -PassThru -Wait -RedirectStandardOutput smoke-out.txt -RedirectStandardError smoke-err.txt
+          Get-Content smoke-out.txt, smoke-err.txt -ErrorAction SilentlyContinue
           if ($p.ExitCode -ne 0) { throw "smoke test failed with exit code $($p.ExitCode)" }
       - uses: actions/upload-artifact@v4
         with:
