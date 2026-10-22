@@ -1,11 +1,10 @@
 [package]
 name = "aide-desktop"
 version = "0.1.0"
-description = "AiDE Desktop Shell"
-authors = ["AiDE Team"]
+description = "AIDE_DEV desktop shell"
+authors = ["Weiping Yan"]
+license = "Apache-2.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 name = "aide_desktop_lib"
@@ -19,14 +18,9 @@ path = "src/main.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon", "image-png"] }
-tauri-plugin-shell = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-fs = "2"
-tauri-plugin-notification = "2"
+tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["full"] }
 log = "0.4"
 env_logger = "0.11"
 

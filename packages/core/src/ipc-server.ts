@@ -156,6 +156,22 @@ export class IpcServer {
       case 'provider.list':
         return this.sendResult(request.id, PROVIDER_PRESETS);
 
+      // Send a one-token request to check the endpoint, key and model.
+      case 'provider.test': {
+        const config = params.provider as ProviderConfig | undefined;
+        if (!config?.baseUrl || !config?.apiKey || !config?.model) {
+          return this.sendError(request.id, -32602, 'provider with baseUrl, apiKey and model is required');
+        }
+        try {
+          const provider = providerRegistry.get(config);
+          await provider.complete({ messages: [{ role: 'user', content: 'ping' }], maxTokens: 1 });
+          return this.sendResult(request.id, { ok: true });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return this.sendResult(request.id, { ok: false, error: message.slice(0, 300) });
+        }
+      }
+
       case 'provider.getPreset': {
         const id = String(params.id ?? '');
         const preset = providerRegistry.getPreset(id);
@@ -231,6 +247,7 @@ export class IpcServer {
         // File tools resolve relative paths and restrict writes to this folder;
         // bash, glob and grep run in it.
         setWorkingDirectory(session.workingDirectory);
+        this.approvalManager.setMode(agentConfig?.permissionMode ?? 'safe');
 
         // Create provider and agent
         const provider = providerRegistry.get(providerConfig);
@@ -358,13 +375,6 @@ export class IpcServer {
         return this.sendResult(request.id, toolRegistry.list());
       }
 
-      case 'tools.execute': {
-        const name = String(params.name ?? '');
-        const args = (params.args ?? {}) as Record<string, unknown>;
-        if (!name) return this.sendError(request.id, -32602, 'name is required');
-        const result = await toolRegistry.execute(name, args);
-        return this.sendResult(request.id, result);
-      }
 
       // --- MCP methods ---
       case 'mcp.connect': {

@@ -101,6 +101,9 @@ export default function ToolActivity({ activity }: Props) {
           <ToolIcon name={activity.name} />
           <span className="font-mono font-medium text-[#cccccc]">{activity.name}</span>
         </span>
+        <span className="min-w-0 truncate font-mono text-[#6b6b6b]">
+          {String(activity.args.command ?? activity.args.path ?? activity.args.pattern ?? activity.args.url ?? '')}
+        </span>
 
         {/* Status label */}
         <span className={`ml-auto flex-shrink-0 ${statusColor}`}>{statusLabel}</span>

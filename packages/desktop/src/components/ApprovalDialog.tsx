@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAgentStore } from '../stores/agent';
-import { useTauri } from '../hooks/useTauri';
+import { respondApproval } from '../lib/api';
 
 export default function ApprovalDialog() {
   const { t } = useTranslation();
@@ -9,7 +9,6 @@ export default function ApprovalDialog() {
   const clearPendingApproval = useAgentStore((s) => s.clearPendingApproval);
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { respondApproval } = useTauri();
 
   if (!pendingApproval) return null;
 
@@ -17,11 +16,7 @@ export default function ApprovalDialog() {
     if (!pendingApproval) return;
     setLoading(true);
     try {
-      await respondApproval({
-        id: pendingApproval.id,
-        approved,
-        remember,
-      });
+      await respondApproval(pendingApproval.id, approved, remember, pendingApproval.toolName);
     } catch (err) {
       console.error('respondApproval error:', err);
     } finally {

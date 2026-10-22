@@ -4,8 +4,6 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import en from './en.json';
 import zhCN from './zh-CN.json';
-import ja from './ja.json';
-import ko from './ko.json';
 
 i18n
   .use(LanguageDetector)
@@ -14,11 +12,9 @@ i18n
     resources: {
       en: { translation: en },
       'zh-CN': { translation: zhCN },
-      ja: { translation: ja },
-      ko: { translation: ko },
     },
     fallbackLng: 'en',
-    supportedLngs: ['en', 'zh-CN', 'ja', 'ko'],
+    supportedLngs: ['en', 'zh-CN'],
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],

@@ -113,13 +113,34 @@ function MessageBubble({ message }: { message: Message }) {
         {message.reasoning && (
           <details className="mb-1 w-full rounded border border-[#3e3e42] bg-[#252526]">
             <summary className="cursor-pointer px-3 py-1.5 text-xs text-[#9d9d9d] hover:text-[#cccccc]">
-              💭 Reasoning
+              {t('chat.thinking')}
             </summary>
             <div className="px-3 py-2 text-xs text-[#9d9d9d] font-mono whitespace-pre-wrap">
               {message.reasoning}
             </div>
           </details>
         )}
+
+        {/* Tools used in this turn */}
+        {!isUser &&
+          message.toolCalls?.map((tc) => {
+            const r = message.toolResults?.find((x) => x.callId === tc.id);
+            return (
+              <div key={tc.id} className="w-full">
+                <ToolActivity
+                  activity={{
+                    callId: tc.id,
+                    name: tc.name,
+                    args: tc.arguments,
+                    result: r?.content,
+                    isError: r?.isError,
+                    status: r?.isError ? 'error' : 'done',
+                    startedAt: 0,
+                  }}
+                />
+              </div>
+            );
+          })}
 
         {/* Main content */}
         {isUser ? (
@@ -133,12 +154,6 @@ function MessageBubble({ message }: { message: Message }) {
           />
         )}
 
-        {/* Tool calls summary */}
-        {message.toolCalls && message.toolCalls.length > 0 && (
-          <div className="mt-1 text-xs text-[#6b6b6b]">
-            Used {message.toolCalls.length} tool{message.toolCalls.length > 1 ? 's' : ''}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -174,7 +189,7 @@ function StreamingBubble() {
         {hasReasoning && (
           <details className="w-full rounded border border-[#3e3e42] bg-[#252526]" open>
             <summary className="cursor-pointer px-3 py-1.5 text-xs text-[#9d9d9d]">
-              💭 {t('chat.thinking')}
+              {t('chat.thinking')}
             </summary>
             <div className="px-3 py-2 text-xs text-[#9d9d9d] font-mono whitespace-pre-wrap">
               {streaming.currentReasoning}
@@ -226,7 +241,6 @@ export default function Chat() {
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 && !streaming.isStreaming ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center px-8">
-            <div className="text-4xl">✦</div>
             <h2 className="text-lg font-semibold text-[#cccccc]">{t('chat.emptyState')}</h2>
             <p className="text-sm text-[#9d9d9d] max-w-sm">{t('chat.emptyStateHint')}</p>
           </div>

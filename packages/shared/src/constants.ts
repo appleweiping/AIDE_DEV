@@ -25,7 +25,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     id: 'qwen',
     name: 'Qwen (Alibaba)',
     nameZh: '通义千问',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     supportsToolUse: true,
     supportsThinking: true,
     supportsVision: true,

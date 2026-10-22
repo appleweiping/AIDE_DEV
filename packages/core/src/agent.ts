@@ -5,6 +5,7 @@ import type { LLMProvider, CompletionRequest, ProviderMessage, ProviderToolCall 
 import { ToolRegistry } from './tools/registry.js';
 import type { ApprovalManager } from './safety/approval.js';
 import { loadProjectContext, formatContextForPrompt } from './context-loader.js';
+import { compactContext, estimateMessageTokens } from './session/compaction.js';
 import type { HooksManager } from './hooks/manager.js';
 import type { PlanManager } from './plan/manager.js';
 
@@ -204,7 +205,6 @@ export class Agent extends EventEmitter {
     if (this.messages.length <= keepRecent + 1) {
       return 'Context is already compact.';
     }
-    const { compactContext, estimateMessageTokens } = await import('./session/compaction.js');
     const result = await compactContext(
       this.messages,
       this.contextWindow * 0.5, // target 50% usage after compaction

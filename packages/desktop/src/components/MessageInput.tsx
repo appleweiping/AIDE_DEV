@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback, type DragEvent, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAgentStore } from '../stores/agent';
-import { useSettingsStore } from '../stores/settings';
-import { useTauri } from '../hooks/useTauri';
+import { sendMessage, cancelAgent } from '../lib/api';
 
 export default function MessageInput() {
   const { t } = useTranslation();
@@ -13,11 +12,10 @@ export default function MessageInput() {
 
   const isStreaming = useAgentStore((s) => s.streaming.isStreaming);
   const currentSessionId = useAgentStore((s) => s.currentSessionId);
+  const setCurrentSession = useAgentStore((s) => s.setCurrentSession);
   const addMessage = useAgentStore((s) => s.addMessage);
   const startStreaming = useAgentStore((s) => s.startStreaming);
-  const workingDirectory = useSettingsStore((s) => s.workingDirectory);
-
-  const { sendMessage, cancelAgent } = useTauri();
+  const stopStreaming = useAgentStore((s) => s.stopStreaming);
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
@@ -25,37 +23,25 @@ export default function MessageInput() {
 
     setError(null);
     setText('');
-
-    // Optimistically add the user message
-    addMessage({
-      role: 'user',
-      content: trimmed,
-      timestamp: Date.now(),
-    });
-
+    addMessage({ role: 'user', content: trimmed, timestamp: Date.now() });
     startStreaming();
 
     try {
-      await sendMessage({
-        message: trimmed,
-        sessionId: currentSessionId ?? undefined,
-        workingDirectory: workingDirectory || '.',
-      });
+      const sessionId = await sendMessage(trimmed, currentSessionId);
+      if (sessionId !== currentSessionId) setCurrentSession(sessionId);
     } catch (err) {
-      setError(t('errors.sendFailed'));
-      console.error('sendMessage error:', err);
+      stopStreaming();
+      setError(err instanceof Error ? err.message : t('errors.sendFailed'));
     }
-  }, [text, isStreaming, currentSessionId, workingDirectory, addMessage, startStreaming, sendMessage, t]);
+  }, [text, isStreaming, currentSessionId, addMessage, startStreaming, stopStreaming, setCurrentSession, t]);
 
   const handleCancel = useCallback(async () => {
-    if (!currentSessionId) return;
     try {
-      await cancelAgent(currentSessionId);
-    } catch (err) {
+      await cancelAgent();
+    } catch {
       setError(t('errors.cancelFailed'));
-      console.error('cancelAgent error:', err);
     }
-  }, [currentSessionId, cancelAgent, t]);
+  }, [t]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {

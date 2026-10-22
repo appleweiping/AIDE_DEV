@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useAgentStore } from '../stores/agent';
+import { loadSession, deleteSession } from '../lib/api';
 
 interface SessionItem {
   id: string;
@@ -29,20 +30,29 @@ export default function SessionList() {
   const setSessions = useAgentStore((s) => s.setSessions);
   const clearMessages = useAgentStore((s) => s.clearMessages);
 
+  const setMessages = useAgentStore((s) => s.setMessages);
+  const isStreaming = useAgentStore((s) => s.streaming.isStreaming);
+
   function handleNewSession() {
+    if (isStreaming) return;
     setCurrentSession(null);
     clearMessages();
   }
 
-  function handleSelectSession(session: SessionItem) {
+  async function handleSelectSession(session: SessionItem) {
+    if (isStreaming) return;
     setCurrentSession(session.id);
-    // Messages will be loaded via the rpc.response event after session.get
-    // For now just clear and let the user start fresh in the selected session
     clearMessages();
+    try {
+      setMessages(await loadSession(session.id));
+    } catch {
+      setMessages([{ role: 'system', content: 'Could not load this session.', timestamp: Date.now() }]);
+    }
   }
 
-  function handleDeleteSession(e: React.MouseEvent, sessionId: string) {
+  async function handleDeleteSession(e: React.MouseEvent, sessionId: string) {
     e.stopPropagation();
+    await deleteSession(sessionId).catch(() => undefined);
     setSessions(sessions.filter((s) => s.id !== sessionId));
     if (currentSessionId === sessionId) {
       setCurrentSession(null);

@@ -76,8 +76,8 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'aide-settings',
-      // Don't persist the API key in plain localStorage in production;
-      // for now we persist everything for convenience during development.
+      // Kept in the web view's local storage on this machine (the settings
+      // dialog says so). The key is only sent to the configured endpoint.
       partialize: (state) => ({
         provider: state.provider,
         maxIterations: state.maxIterations,

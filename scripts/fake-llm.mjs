@@ -35,6 +35,16 @@ export function startFakeLLM(port = 0) {
       const firstUser = String(messages.find((m) => m.role === 'user')?.content ?? '');
       const toolMsgs = messages.filter((m) => m.role === 'tool');
 
+      if (parsed.stream === false) {
+        // non-streaming request, e.g. the settings page's connection test
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          choices: [{ index: 0, message: { role: 'assistant', content: 'pong' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 5, completion_tokens: 1 },
+        }));
+        return;
+      }
+
       res.writeHead(200, { 'Content-Type': 'text/event-stream' });
       const send = (delta, finish = null) =>
         res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`);

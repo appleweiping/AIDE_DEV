@@ -1,124 +1,72 @@
 import { useEffect } from 'react';
-import { listen } from '@tauri-apps/api/event';
 import { useAgentStore } from '../stores/agent';
-import type {
-  StreamContentEvent,
-  StreamReasoningEvent,
-  StreamToolStartEvent,
-  StreamToolEndEvent,
-  AgentDoneEvent,
-  AgentErrorEvent,
-  ApprovalRequestEvent,
-} from '@aide/shared';
+import { onCoreEvent, engineError } from '../lib/core';
+import { listSessions } from '../lib/api';
 
 /**
- * Bridges Tauri events emitted by the sidecar to the agent Zustand store.
- * Must be mounted once at the app root level.
+ * Feeds engine events into the agent store. Mount once at the app root.
+ * Event names and payloads come from core/src/ipc-server.ts.
  */
 export function useAgent() {
-  const store = useAgentStore();
-
   useEffect(() => {
-    const unlisten: Array<() => void> = [];
+    const store = useAgentStore.getState;
+    const refreshSessions = () =>
+      listSessions()
+        .then((s) => store().setSessions(s))
+        .catch(() => undefined);
+    const system = (content: string) => store().addMessage({ role: 'system', content, timestamp: Date.now() });
 
-    async function setup() {
-      // stream.content — assistant is generating text
-      unlisten.push(
-        await listen<StreamContentEvent>('stream.content', (event) => {
-          if (!store.streaming.isStreaming) {
-            store.startStreaming();
-          }
-          store.appendContent(event.payload.delta);
-        }),
-      );
-
-      // stream.reasoning — assistant is thinking (extended thinking mode)
-      unlisten.push(
-        await listen<StreamReasoningEvent>('stream.reasoning', (event) => {
-          if (!store.streaming.isStreaming) {
-            store.startStreaming();
-          }
-          store.appendReasoning(event.payload.delta);
-        }),
-      );
-
-      // stream.toolStart — a tool call has begun
-      unlisten.push(
-        await listen<StreamToolStartEvent>('stream.toolStart', (event) => {
-          store.startToolActivity(
-            event.payload.callId,
-            event.payload.name,
-            event.payload.args,
-          );
-        }),
-      );
-
-      // stream.toolEnd — a tool call has completed
-      unlisten.push(
-        await listen<StreamToolEndEvent>('stream.toolEnd', (event) => {
-          store.endToolActivity(
-            event.payload.callId,
-            event.payload.result,
-            event.payload.isError,
-            event.payload.durationMs,
-          );
-        }),
-      );
-
-      // agent.done — the agent has finished its turn
-      unlisten.push(
-        await listen<AgentDoneEvent>('agent.done', (event) => {
-          store.stopStreaming(event.payload.content);
-          if (event.payload.sessionId && !store.currentSessionId) {
-            store.setCurrentSession(event.payload.sessionId);
-          }
-        }),
-      );
-
-      // agent.error — the agent encountered an error
-      unlisten.push(
-        await listen<AgentErrorEvent>('agent.error', (event) => {
-          store.stopStreaming();
-          store.addMessage({
-            role: 'assistant',
-            content: `Error: ${event.payload.message}`,
-            timestamp: Date.now(),
+    const off = onCoreEvent((event, data) => {
+      const s = store();
+      switch (event) {
+        case 'ready':
+          void refreshSessions();
+          break;
+        case 'agent.content':
+          if (!s.streaming.isStreaming) s.startStreaming();
+          s.appendContent(data.delta);
+          break;
+        case 'agent.reasoning':
+          if (!s.streaming.isStreaming) s.startStreaming();
+          s.appendReasoning(data.delta);
+          break;
+        case 'agent.tool_start':
+          s.startToolActivity(data.call.id, data.call.name, data.call.arguments ?? {});
+          break;
+        case 'agent.tool_end':
+          s.endToolActivity(data.call.id, String(data.result?.content ?? ''), !!data.result?.isError, data.elapsedMs ?? 0);
+          break;
+        case 'agent.error':
+          s.stopStreaming();
+          system(`Error: ${data.error}`);
+          break;
+        case 'agent.done':
+          if (s.streaming.isStreaming) s.stopStreaming(data.reason === 'reply' ? data.content : undefined);
+          if (data.reason === 'cancelled') system('Stopped.');
+          if (data.reason === 'max_iterations') system('Stopped after the maximum number of steps.');
+          void refreshSessions();
+          break;
+        case 'approval_request':
+          s.setPendingApproval({
+            id: data.id,
+            toolName: data.toolName,
+            description: data.description,
+            command: data.command,
+            filePath: data.filePath,
           });
-        }),
-      );
+          break;
+        case 'sidecar.error':
+          system(data.message);
+          break;
+        case 'sidecar.stopped':
+          s.stopStreaming();
+          system('The agent engine stopped. Restart the app to continue.');
+          break;
+      }
+    });
 
-      // approval.request — the agent needs user approval for a tool
-      unlisten.push(
-        await listen<ApprovalRequestEvent>('approval.request', (event) => {
-          store.setPendingApproval({
-            id: event.payload.id,
-            toolName: event.payload.toolName,
-            description: event.payload.description,
-            command: event.payload.command,
-            filePath: event.payload.filePath,
-          });
-        }),
-      );
-
-      // sidecar.stopped — the Node.js process exited
-      unlisten.push(
-        await listen('sidecar.stopped', () => {
-          store.stopStreaming();
-          store.addMessage({
-            role: 'system',
-            content: 'Agent core process stopped.',
-            timestamp: Date.now(),
-          });
-        }),
-      );
-    }
-
-    setup().catch(console.error);
-
-    return () => {
-      unlisten.forEach((fn) => fn());
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return store;
+    void refreshSessions();
+    void engineError().then((msg) => msg && system(msg));
+    return off;
+  }, []);
 }
